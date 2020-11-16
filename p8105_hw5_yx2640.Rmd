@@ -95,16 +95,32 @@ results_df %>%
 
 Import one dataset 
 
-```{r, error = TRUE}
+```{r}
 path_df = 
   tibble(
     path = list.files("./data"),
   ) %>% 
   mutate(
     path = str_c("./data/", path),
-    data = map(.x=path,~read_csv(.x)))
-
+    data = map(.x = path,~read_csv(.x)),
+    arm = str_remove(path, ".csv"),
+    arm = str_remove(arm, "./data/")) %>%
+   separate(arm,c("arm","id"),sep = "_")%>%
+  mutate(
+    arm = ifelse(arm == "con", "control", "experiment")
+  ) %>%
+  unnest(data) %>%
+  pivot_longer(
+    week_1:week_8,
+    values_to = "observation",
+    names_to = "week"
+  ) %>%
+  mutate(week = str_remove(week, "week_"))
+  
 ```
 
 
+```{r}
+
+```
 
