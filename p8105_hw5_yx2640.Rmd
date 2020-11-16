@@ -95,7 +95,7 @@ results_df %>%
 
 Import one dataset 
 
-```{r}
+```{r, message=FALSE}
 path_df = 
   tibble(
     path = list.files("./data"),
@@ -115,12 +115,19 @@ path_df =
     values_to = "observation",
     names_to = "week"
   ) %>%
-  mutate(week = str_remove(week, "week_"))
+  mutate(week = str_remove(week, "week_")) %>%
+  select(-path)
   
 ```
 
+Spaghetti plot
 
 ```{r}
+spaghetti = path_df %>%
+  unite("subjects", c(arm, id))
+
+ggplot()+geom_line(data = spaghetti, aes(x = week, y = observation, group = subjects, color = subjects))+
+  labs(title="observations on each subject over time")
 
 ```
 
