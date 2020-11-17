@@ -90,7 +90,7 @@ results_df %>%
 
 
 
-## Problem 2 ideas ...
+## Problem 2
 
 
 Import one dataset 
@@ -117,17 +117,96 @@ path_df =
   ) %>%
   mutate(week = str_remove(week, "week_")) %>%
   select(-path)
-  
+
+path_df
 ```
 
 Spaghetti plot
 
 ```{r}
 spaghetti = path_df %>%
+  mutate(arm_new = arm) %>%
   unite("subjects", c(arm, id))
+  
 
-ggplot()+geom_line(data = spaghetti, aes(x = week, y = observation, group = subjects, color = subjects))+
+ggplot()+geom_line(data = spaghetti, aes(x = week, y = observation, group = subjects, color = arm_new))+
   labs(title="observations on each subject over time")
 
 ```
+
+From the graph, we can see that experiment groups have increased through the eight weeks, and it's overall observation values are higher than control groups. Control groups' trends didn't have a very significant increase or decrease through these eight weeks.
+
+
+## Problem 3
+
+Function for t-test
+```{r}
+
+set.seed(100)
+
+n = 30
+sigma = 5
+
+ttest = function(mu) {
+  
+  sim_data = tibble(
+    x = rnorm(n = 30, mean = mu, sd = sigma),
+  )
+  
+  sim_data %>% 
+    summarize(
+      mu_hat = mean(x),
+      t_test = t.test(x, mu = mu, conf.level = 0.95)%>%
+    broom::tidy() %>%
+    select(p.value))
+}
+
+```
+
+generate 5000 datasets and repeat
+```{r, message=FALSE}
+
+com_result = function(mu){
+  
+  rerun(5000, ttest(mu)) %>%
+    bind_rows() %>% 
+  mutate(p_value = t_test$p.value) %>% 
+  select(mu_hat, p_value)
+}
+
+# for mu = 0
+com_result(0)
+
+# for mu = 1,2,3,4,5,6
+
+mu_result = tibble(
+  mu = c(0,1,2,3,4,5,6)
+) %>%
+  mutate(output = map(.x = mu, ~com_result(.x)),
+         estimate = map(output, bind_rows)) %>%
+  unnest(estimate) %>%
+  select(mu, mu_hat, p_value)
+
+mu_result
+
+
+#plot showing the proportion of times the null was rejected and true mean
+
+porp_test = mu_result %>%
+  filter(p_value<0.05) %>%
+  group_by(mu) %>%
+  summarize(
+    reject = n()
+  ) %>%
+  mutate(porp = reject/5000)
+
+ggplot(data = porp_test, aes(x = mu, y = porp)) + geom_line() +
+  labs(
+    x = "true mean",
+    y = "Proportion of times the null was rejected"
+  )
+```
+
+
+
 
