@@ -142,7 +142,7 @@ From the graph, we can see that experiment groups have increased through the eig
 Function for t-test
 ```{r}
 
-set.seed(100)
+set.seed(33)
 
 # n = 30
 # sigma = 5
@@ -159,7 +159,6 @@ ttest = function(mu) {
     broom::tidy() )
 }
 
-ttest(0)
 ```
 
 generate 5000 datasets and repeat
@@ -167,7 +166,7 @@ generate 5000 datasets and repeat
 
 com_result = function(mu){
   
-  rerun(50, ttest(mu)) %>%
+  rerun(5000, ttest(mu)) %>%
     bind_rows() %>%
     select(p.value, estimate)
 }
@@ -192,7 +191,7 @@ porp_test = mu_result %>%
   filter(p.value < 0.05) %>%
   summarize(
     reject = n(),
-    reject = reject/50
+    reject = reject/5000
   )
 
 ggplot(data = porp_test, aes(x = mu, y = reject, color = mu)) + geom_line() + geom_point() +
@@ -204,6 +203,55 @@ ggplot(data = porp_test, aes(x = mu, y = reject, color = mu)) + geom_line() + ge
 ```
 
 __From the plot above we can see that when the $\mu$ is increasing, the power also increases. When true mean gets larger, the proportion of the null ($\mu = 0$) was rejected also gets larger and approaching to 1. __
+
+
+plot showing the average estimate of $\hat{\mu}$ on the y axis and the true value of $\mu$ on the x axis.
+```{r, message=FALSE}
+ave_estimate = tibble(
+  mu = c(0,1,2,3,4,5,6)
+) %>%
+  mutate(output = map(.x = mu, ~com_result(.x))) %>%
+  unnest(output) %>%
+  group_by(mu) %>%
+  summarize(
+    estimate = mean(estimate)
+  )
+
+ggplot(data = ave_estimate, aes(x = mu, y = estimate, color = mu)) + geom_line() + geom_point() +
+  scale_x_continuous(limits = c(0,6), breaks = seq(0,6,1)) +
+  labs(
+    x = "true mean",
+    y = "average estimate of mu hat"
+  )
+  
+```
+
+
+plot the average estimate of $\hat{\mu}$ only in samples for which the null was rejected on the y axis and the true value of $\mu$ on the x axis.
+
+```{r, message=FALSE}
+sam_estimate = tibble(
+  mu = c(0,1,2,3,4,5,6)
+) %>%
+  mutate(output = map(.x = mu, ~com_result(.x))) %>%
+  unnest(output) %>%
+  select(mu, p.value, estimate) %>%
+group_by(mu) %>%
+  filter(p.value < 0.05) %>%
+  summarize(
+    estimate = mean(estimate)
+  )
+
+ggplot(data = sam_estimate, aes(x = mu, y = estimate, color = mu)) + geom_line() + geom_point() +
+  scale_x_continuous(limits = c(0,6), breaks = seq(0,6,1)) +
+  labs(
+    x = "true mean",
+    y = "average estimate of mu hat",
+    title = " average estimate of mu hat only in samples for which the null was rejected"
+  )
+```
+
+__For $\mu$ = 0, 1, 2,  we can see that the sample average $\hat{\mu}$ for which the null is rejected is different with the true mean. When $\mu$ increases ($\mu$ = 3, 4, 5, 6), the sample average $\hat{\mu}$ is getting closer and closer to the true mean, which is approximately equal to the true mean. This is because when true mean increases, the probability that the null hypothesis rejected also increases. __
 
 
 
